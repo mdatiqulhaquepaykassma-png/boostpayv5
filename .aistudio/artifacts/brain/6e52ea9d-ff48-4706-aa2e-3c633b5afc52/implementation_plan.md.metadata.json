@@ -1,0 +1,6 @@
+{
+  "summary": "Implementation plan to fix real-time chat with Server-Sent Events (SSE) instant push, server-authoritative message mutation, private conversation isolation, auto-scrolling message streams, and real-time floating toast alerts with 1-tap jump.",
+  "updatedAt": "2026-10-17T21:41:15.666372472Z",
+  "requestFeedback": true,
+  "userFacing": true
+}
