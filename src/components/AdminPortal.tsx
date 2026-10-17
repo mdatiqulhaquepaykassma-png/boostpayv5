@@ -1790,23 +1790,36 @@ export const AdminPortal: FC<Props> = ({ onBack }) => {
                       .filter(m => m.conversationId === activeConv.id)
                       .map((m) => {
                         const isAdmin = m.senderId === 'ADMIN_SUPPORT';
+                        const reactions = m.reactions || {};
+                        const hasReactions = Object.keys(reactions).some(k => reactions[k]?.length > 0);
                         return (
                           <div
                             key={m.id}
                             className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}
                           >
                             <div
-                              className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-xs ${
+                              className={`max-w-[78%] rounded-2xl px-4 py-2.5 text-xs ${
                                 isAdmin
-                                  ? 'bg-amber-500 text-zinc-950 font-medium'
-                                  : 'bg-zinc-800 text-zinc-100'
+                                  ? 'bg-gradient-to-br from-amber-500 to-amber-600 text-zinc-950 font-medium rounded-br-xs shadow-md shadow-amber-500/10'
+                                  : 'bg-zinc-800/90 border border-zinc-700/60 text-zinc-100 rounded-bl-xs shadow-sm'
                               }`}
                             >
-                              {m.text}
+                              <p className="break-words">{m.text}</p>
+                              <div className={`text-[9px] font-mono mt-1 ${
+                                isAdmin ? 'text-zinc-950/70 text-right' : 'text-zinc-400 text-right'
+                              }`}>
+                                {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </div>
                             </div>
-                            <span className="text-[9px] text-zinc-500 font-mono mt-0.5 px-1">
-                              {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                            {hasReactions && (
+                              <div className="flex gap-1 mt-1">
+                                {Object.entries(reactions).map(([emoji, uids]) => (
+                                  <span key={emoji} className="text-[10px] bg-zinc-800/80 border border-zinc-700 rounded-full px-1.5 py-0.2">
+                                    {emoji} {uids.length}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         );
                       })}

@@ -118,7 +118,12 @@
       "senderId": "1",
       "senderRole": "USER",
       "text": "Test message from CLI",
-      "timestamp": 1792273580844
+      "timestamp": 1792273580844,
+      "reactions": {
+        "🚀": [
+          "2"
+        ]
+      }
     },
     {
       "id": "MSG-1792273593573-7j02u",

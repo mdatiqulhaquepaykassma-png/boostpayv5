@@ -381,6 +381,14 @@ export class BoostPayStore {
                   message: incomingMsg.text
                 });
               }
+            } else if (data.type === 'reaction_update' && data.messageId) {
+              const msgs = this.getMessages();
+              const idx = msgs.findIndex(m => m.id === data.messageId);
+              if (idx >= 0) {
+                msgs[idx] = { ...msgs[idx], reactions: data.reactions };
+                localStorage.setItem(STORAGE_MESSAGES, JSON.stringify(msgs));
+                this.triggerChatUpdate(this.getConversations(), msgs);
+              }
             }
           } catch (e) {
             console.warn('Error parsing SSE event data:', e);
@@ -412,6 +420,50 @@ export class BoostPayStore {
       }
       this.activeStreamUserId = null;
     };
+  }
+
+  /**
+   * Toggle emoji reaction on a message
+   */
+  static async toggleMessageReaction(
+    messageId: string,
+    emoji: string,
+    userId: string
+  ): Promise<{ success: boolean; reactions?: Record<string, string[]> }> {
+    const msgs = this.getMessages();
+    const idx = msgs.findIndex(m => m.id === messageId);
+    let updatedReactions: Record<string, string[]> = {};
+
+    if (idx >= 0) {
+      const msg = msgs[idx];
+      const reactions = { ...(msg.reactions || {}) };
+      const currentList: string[] = Array.isArray(reactions[emoji]) ? [...reactions[emoji]] : [];
+      if (currentList.includes(userId)) {
+        reactions[emoji] = currentList.filter(id => id !== userId);
+        if (reactions[emoji].length === 0) delete reactions[emoji];
+      } else {
+        reactions[emoji] = [...currentList, userId];
+      }
+      msgs[idx] = { ...msg, reactions };
+      localStorage.setItem(STORAGE_MESSAGES, JSON.stringify(msgs));
+      this.triggerChatUpdate(this.getConversations(), msgs);
+      updatedReactions = reactions;
+    }
+
+    try {
+      const res = await fetch('/api/chat/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, userId, emoji })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return { success: true, reactions: data.reactions };
+      }
+    } catch {
+      // Keep optimistic
+    }
+    return { success: true, reactions: updatedReactions };
   }
 
   /**

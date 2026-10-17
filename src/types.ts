@@ -41,6 +41,7 @@ export interface Message {
   senderRole: 'USER' | 'ADMIN';
   text: string;
   timestamp: number;
+  reactions?: Record<string, string[]>; // emoji -> userIds
 }
 
 export interface Conversation {

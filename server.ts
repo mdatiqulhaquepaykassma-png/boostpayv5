@@ -35,8 +35,25 @@ function broadcastChatMessage(message: any, conversation: any) {
       try {
         client.res.write(`data: ${payload}\n\n`);
       } catch {
-        chatSseClients.delete(clientId);
       }
+    }
+  }
+}
+
+function broadcastChatMessageReaction(messageId: string, reactions: any, conversationId: string) {
+  const payload = JSON.stringify({
+    type: 'reaction_update',
+    messageId,
+    reactions,
+    conversationId,
+    timestamp: Date.now()
+  });
+
+  for (const [clientId, client] of chatSseClients.entries()) {
+    try {
+      client.res.write(`data: ${payload}\n\n`);
+    } catch {
+      chatSseClients.delete(clientId);
     }
   }
 }
@@ -811,6 +828,51 @@ async function startServer() {
         success: true,
         message: newMsg,
         conversation: conv
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/chat/react', (req, res) => {
+    try {
+      const { messageId, userId, emoji } = req.body;
+      const cleanMsgId = String(messageId || '').trim();
+      const cleanUserId = String(userId || '').trim();
+      const cleanEmoji = String(emoji || '').trim();
+
+      if (!cleanMsgId || !cleanUserId || !cleanEmoji) {
+        return res.status(400).json({ error: 'messageId, userId, and emoji are required.' });
+      }
+
+      const db = readDb();
+      if (!db.messages) db.messages = [];
+      const msg = db.messages.find((m: any) => m.id === cleanMsgId);
+      if (!msg) {
+        return res.status(404).json({ error: 'Message not found.' });
+      }
+
+      if (!msg.reactions) msg.reactions = {};
+      const currentList: string[] = Array.isArray(msg.reactions[cleanEmoji]) ? msg.reactions[cleanEmoji] : [];
+
+      if (currentList.includes(cleanUserId)) {
+        msg.reactions[cleanEmoji] = currentList.filter((id: string) => id !== cleanUserId);
+        if (msg.reactions[cleanEmoji].length === 0) {
+          delete msg.reactions[cleanEmoji];
+        }
+      } else {
+        msg.reactions[cleanEmoji] = [...currentList, cleanUserId];
+      }
+
+      writeDb(db);
+
+      // Broadcast reaction update via SSE
+      broadcastChatMessageReaction(cleanMsgId, msg.reactions, msg.conversationId);
+
+      res.json({
+        success: true,
+        messageId: cleanMsgId,
+        reactions: msg.reactions
       });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
